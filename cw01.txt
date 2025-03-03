@@ -1,7 +1,3 @@
-SELECT table_name FROM user_tables;
-DROP TABLE JOB_HISTORY;
-
-
 -- Tabela REGIONS
 CREATE TABLE REGIONS (
     region_id INT PRIMARY KEY,
@@ -74,3 +70,8 @@ CREATE TABLE JOB_HISTORY (
     FOREIGN KEY (job_id) REFERENCES JOBS(job_id),
     FOREIGN KEY (department_id) REFERENCES DEPARTMENTS(department_id)
 );
+
+SELECT table_name FROM user_tables;
+DROP TABLE JOB_HISTORY;
+
+
