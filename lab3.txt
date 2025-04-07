@@ -1,0 +1,90 @@
+1.
+SELECT last_name, salary, RANK() OVER (ORDER BY salary DESC) AS ranking
+FROM employees;
+
+2.
+SELECT last_name, salary, SUM(salary) OVER () AS total_salary
+FROM employees;
+
+3.
+CREATE TABLE sales AS SELECT * FROM HR.sales;
+CREATE TABLE products AS SELECT * FROM HR.products;
+
+4.
+WITH SalesData AS (
+    SELECT e.last_name, p.product_name, 
+           SUM(s.quantity * s.price) OVER (PARTITION BY e.employee_id) AS cumulative_sales
+    FROM sales s
+    JOIN employees e ON s.employee_id = e.employee_id
+    JOIN products p ON s.product_id = p.product_id
+)
+SELECT last_name, product_name, cumulative_sales,
+       RANK() OVER (ORDER BY cumulative_sales DESC) AS sales_rank
+FROM SalesData;
+
+5.
+SELECT e.last_name, p.product_name, s.price, 
+       COUNT(s.sale_id) OVER (PARTITION BY s.sale_date, p.product_id) AS transaction_count,
+       SUM(s.quantity * s.price) OVER (PARTITION BY s.sale_date, p.product_id) AS total_paid,
+       LAG(s.price) OVER (PARTITION BY p.product_id ORDER BY s.sale_date) AS previous_price,
+       LEAD(s.price) OVER (PARTITION BY p.product_id ORDER BY s.sale_date) AS next_price
+FROM sales s
+JOIN employees e ON s.employee_id = e.employee_id
+JOIN products p ON s.product_id = p.product_id;
+
+6.
+SELECT p.product_name, s.price,
+       SUM(s.quantity * s.price) OVER (PARTITION BY EXTRACT(YEAR FROM s.sale_date), 
+                                                     EXTRACT(MONTH FROM s.sale_date)) AS monthly_total,
+       SUM(s.quantity * s.price) OVER (PARTITION BY p.product_id ORDER BY s.sale_date) AS cumulative_monthly
+FROM sales s
+JOIN products p ON s.product_id = p.product_id;
+
+7.
+SELECT p.product_name, p.product_category, 
+       SUM(CASE WHEN EXTRACT(YEAR FROM s.sale_date) = 2022 THEN s.price END) AS price_2022,
+       SUM(CASE WHEN EXTRACT(YEAR FROM s.sale_date) = 2023 THEN s.price END) AS price_2023,
+       (SUM(CASE WHEN EXTRACT(YEAR FROM s.sale_date) = 2023 THEN s.price END) - 
+        SUM(CASE WHEN EXTRACT(YEAR FROM s.sale_date) = 2022 THEN s.price END)) AS price_difference
+FROM sales s
+JOIN products p ON s.product_id = p.product_id
+GROUP BY p.product_name, p.product_category;
+
+8.
+SELECT p.product_category, p.product_name, s.price,
+       MIN(s.price) OVER (PARTITION BY p.product_category) AS min_price,
+       MAX(s.price) OVER (PARTITION BY p.product_category) AS max_price,
+       MAX(s.price) OVER (PARTITION BY p.product_category) - MIN(s.price) OVER (PARTITION BY p.product_category) AS price_difference
+FROM sales s
+JOIN products p ON s.product_id = p.product_id;
+
+9.
+SELECT p.product_name,
+       AVG(s.price) OVER (PARTITION BY p.product_id ORDER BY s.sale_date ROWS BETWEEN 1 PRECEDING AND 1 FOLLOWING) AS moving_avg_price
+FROM sales s
+JOIN products p ON s.product_id = p.product_id;
+
+10.
+SELECT p.product_name, p.product_category, s.price,
+       RANK() OVER (PARTITION BY p.product_category ORDER BY s.price DESC) AS category_price_rank,
+       ROW_NUMBER() OVER (PARTITION BY p.product_category ORDER BY s.price DESC) AS row_number_category,
+       DENSE_RANK() OVER (PARTITION BY p.product_category ORDER BY s.price DESC) AS dense_rank_category
+FROM sales s
+JOIN products p ON s.product_id = p.product_id;
+
+11.
+WITH SalesRank AS (
+    SELECT e.last_name, p.product_name,
+           SUM(s.quantity * s.price) OVER (PARTITION BY e.employee_id ORDER BY s.sale_date) AS running_total_sales
+    FROM sales s
+    JOIN employees e ON s.employee_id = e.employee_id
+    JOIN products p ON s.product_id = p.product_id
+)
+SELECT last_name, product_name, running_total_sales,
+       RANK() OVER (ORDER BY running_total_sales DESC) AS sales_order_rank
+FROM SalesRank;
+
+12.
+SELECT DISTINCT e.first_name, e.last_name, e.job_id
+FROM employees e
+JOIN sales s ON e.employee_id = s.employee_id;
